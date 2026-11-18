@@ -143,7 +143,7 @@ const resolve=(v,c)=>(typeof v==="string"&&v[0]==="@")?(c[v.slice(1)]??0):(Numbe
 const orcRow=(r,c)=>{const q=resolve(r.q26,c),v=resolve(r.v26,c);return{q,v,t:q*v,t25:(Number(r.q25)||0)*(Number(r.v25)||0)}};
 function totals(){
   const c=calc();
-  const d25=S.orcamento.reduce((a,r)=>a+orcRow(r,c).t25,0), d26=S.orcamento.reduce((a,r)=>a+orcRow(r,c).t,0);
+  const d25=11571.14, d26=S.orcamento.reduce((a,r)=>a+orcRow(r,c).t,0);
   const r25=S.receitas.reduce((a,r)=>a+(Number(r.v25)||0),0), meta=S.receitas.reduce((a,r)=>a+(Number(r.meta)||0),0), conf=S.receitas.reduce((a,r)=>a+(Number(r.conf)||0),0);
   const chk=S.checklist, done=chk.filter(x=>x.status==="Concluído").length, late=chk.filter(x=>x.status!=="Concluído"&&new Date(x.prazo+"T00:00:00")<today()).length;
   const pres=S.presenca, cad=pres.filter(x=>x.nome).length, presentes=pres.filter(x=>x.pres).length, confs=pres.filter(x=>x.conf==="S").length;
@@ -224,9 +224,9 @@ V.orcamento=()=>{const c=calc();const cols=[
  {k:"q26",l:"Qtd 26",t:"ref"},{k:"v26",l:"Vlr un 26",t:"ref",money:1},{k:"_t26",l:"Total 2026",calc:r=>orcRow(r,c).t,fmt:brl},
  {k:"status",l:"Status",t:"status",opts:["A orçar","Orçado","Aprovado","Pedido feito","Pago"]},{k:"resp",l:"Responsável"},{k:"obs",l:"Obs",t:"long"}];
  const t=totals();
- return phead("Orçamento 2026",'Base: realizado de 2025. Valores "auto" são calculados pelas premissas — substitua pelo número fechado com o fornecedor. Anexe o orçamento recebido em Documentos.')+
- `<div class="grid g4 mb">${kpi("Total 2025",brl(t.d25),"","","📁")}${kpi("Total 2026",brl(t.d26),"","red","💸")}${kpi("Custo / presente",brl(t.d26/(S.premissas.estimados||1)),`2025: ${brl(t.d25/134)}`,"","👤")}${kpi("Pagos",`${S.orcamento.filter(r=>r.status==="Pago").length}/${S.orcamento.length}`,"","","✅")}</div>
- ${table("orcamento",S.orcamento,cols,{foot:{_t25:brl(t.d25),_t26:brl(t.d26)}})}`};
+ return phead("Orçamento 2026",'Só orçamentos recebidos para 2026 — o que ainda não tem orçamento fica no Checklist como "Orçar…". Colunas de 2025 ficam como comparação; o total 2025 é o realizado da 1ª Convenção (R$ 11.571,14).')+
+ `<div class="grid g4 mb">${kpi("Total 2025 (realizado)",brl(t.d25),"1ª Convenção","","📁")}${kpi("Total 2026",brl(t.d26),"","red","💸")}${kpi("Custo / presente",brl(t.d26/(S.premissas.estimados||1)),`2025: ${brl(t.d25/134)}`,"","👤")}${kpi("Pagos",`${S.orcamento.filter(r=>r.status==="Pago").length}/${S.orcamento.length}`,"","","✅")}</div>
+ ${table("orcamento",S.orcamento,cols,{foot:{_t25:brl(S.orcamento.reduce((a,r)=>a+orcRow(r,CALC).t25,0)),_t26:brl(t.d26)}})}`};
 
 V.receitas=()=>{const cols=[{k:"forn",l:"Fornecedor / parceiro",b:1},{k:"tipo",l:"Tipo",t:"sel",opts:["Cashback","Patrocínio","Bonificação","Outro"]},{k:"como",l:"Como entrou em 2025",t:"long"},{k:"v25",l:"2025",t:"money"},{k:"meta",l:"Meta 2026",t:"money"},{k:"conf",l:"Confirmado",t:"money"},{k:"status",l:"Status",t:"status",opts:["A contatar","Em negociação","Confirmado","Recebido"]},{k:"resp",l:"Contato por"},{k:"notas",l:"Notas / comprovantes",t:"long"},{k:"obs",l:"Obs",t:"long"}];
  const t=totals();
@@ -267,8 +267,8 @@ V.trofeus=()=>{const c=calc(),cfg=S.trofeus_cfg,ed=editing==="trofeus_cfg";
  const pc=[{k:"nome",l:"Homenageado",b:1},{k:"cargo",l:"Cargo"},{k:"peca",l:"Peça"},{k:"texto",l:"Texto (rascunho)",t:"long"},{k:"valor",l:"Valor est.",t:"money"},{k:"status",l:"Status",t:"status",opts:["A orçar","Orçado","Aprovado","Pedido feito","Pago"]}];
  const ptot=S.placas.reduce((a,r)=>a+(Number(r.valor)||0),0);
  const inp=(k,v)=>ed?`<input class="n" type="number" data-c="${k}" value="${v}" style="width:72px;font:inherit;padding:5px;border:1px solid #d9dce6;border-radius:9px">`:v;
- return phead("Troféus e placas","Troféus Ibélia (mesmo modelo de 2025) e placas Valorize: 1 por diretor + quadro da sala do Adelton.",ed?`<button class="btn p" data-save="trofeus_cfg">Salvar</button><button class="btn s" data-cancel>Cancelar</button>`:`<button class="btn" data-edit="trofeus_cfg" ${canWrite?"":"disabled"}>✏️ Preços/qtde</button>`)+
- `<div class="grid g4 mb">${kpi("Troféus",c.trof_posto+c.trof_gerente+c.trof_colab+c.trof_camp,"unidades","","🏆")}${kpi("Total troféus",brl(c.trof_total),"preços 2025","red","💸")}${kpi("Placas + quadro",S.placas.length,"","","🪧")}${kpi("Total placas",brl(ptot),"estimativa","red","💸")}</div>
+ return phead("Troféus e placas","Troféus Criart (orçamento nº 2242, desenho Versão 2 · Moderna) e placas de homenagem. Em 2025 foram Ibélia (R$ 50 e R$ 35).",ed?`<button class="btn p" data-save="trofeus_cfg">Salvar</button><button class="btn s" data-cancel>Cancelar</button>`:`<button class="btn" data-edit="trofeus_cfg" ${canWrite?"":"disabled"}>✏️ Preços/qtde</button>`)+
+ `<div class="grid g4 mb">${kpi("Troféus",c.trof_posto+c.trof_gerente+c.trof_colab+c.trof_camp,"unidades","","🏆")}${kpi("Total troféus",brl(c.trof_total),"orçamento Criart","red","💸")}${kpi("Placas + quadro",S.placas.length,"","","🪧")}${kpi("Total placas",brl(ptot),"estimativa","red","💸")}</div>
  <div class="card mb"><h3>Resumo do pedido Ibélia</h3><div class="tw" style="box-shadow:none"><table style="min-width:560px"><thead><tr><th>Modelo</th><th class="n">Qtd</th><th class="n">Unit.</th><th class="n">Total</th><th>Regra</th></tr></thead><tbody>
  <tr><td class="b">Troféu POSTO bico de bomba 25x27</td><td class="n">${c.trof_posto}</td><td class="n">${inp("preco_grande",cfg.preco_grande)}</td><td class="n">${brl(c.trof_posto*cfg.preco_grande)}</td><td class="muted">postos marcados + ${inp("extra_grande",cfg.extra_grande||0)} (ADM e Adelton)</td></tr>
  <tr><td class="b">Gerente do ano 13x15</td><td class="n">${c.trof_gerente}</td><td class="n">${inp("preco_pequeno",cfg.preco_pequeno)}</td><td class="n">${brl(c.trof_gerente*cfg.preco_pequeno)}</td><td class="muted">1 por posto + ${inp("diretores",cfg.diretores)} diretores</td></tr>
