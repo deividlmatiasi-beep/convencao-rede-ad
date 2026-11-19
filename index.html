@@ -43,6 +43,31 @@ a{color:var(--blue);text-decoration:none}
  .sheet .h{width:40px;height:4px;border-radius:4px;background:#d8dbe4;margin:2px auto 12px}
 }
 @media(min-width:901px){.bnav,.sheet{display:none!important}}
+.acts{white-space:nowrap;text-align:right;width:1%;position:sticky;right:0;z-index:1;background:#fff;box-shadow:-10px 0 12px -10px rgba(18,20,32,.25)}
+th.acts{background:#f8f9fc;z-index:2}tbody tr:hover td.acts{background:#fafbfe}tfoot td:last-child{position:sticky;right:0}
+.ib{border:1px solid var(--line);background:#fff;width:34px;height:34px;border-radius:10px;cursor:pointer;display:inline-grid;place-items:center;margin-left:4px;padding:0;color:var(--ink)}
+.ib:hover{background:#f3f4f8}.ib.d:hover{background:#fbe9ec;border-color:#f3c2cb}
+.ib svg{width:16px;height:16px}
+.fgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.fgrid .full{grid-column:1/-1}
+@media(max-width:560px){.fgrid{grid-template-columns:1fr}}
+label.f .hint{font-weight:400;color:var(--mut);font-size:11px}
+label.f.chk{display:flex;align-items:center;gap:8px}label.f.chk input{width:20px;height:20px;margin:0;accent-color:var(--red)}
+.modal .box{width:min(640px,100%)}
+@media(max-width:760px){
+ .tw.cardable{background:transparent;border:0;box-shadow:none}
+ .tw.cardable table{min-width:0}
+ .tw.cardable thead{display:none}
+ .tw.cardable tbody tr{display:block;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:10px;box-shadow:var(--sh)}
+ .tw.cardable tbody td{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;border:0;padding:5px 0;text-align:right}
+ .tw.cardable tbody td::before{content:attr(data-label);color:var(--mut);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;text-align:left;flex:none;max-width:42%}
+ .tw.cardable tbody td:first-child{font-size:15px;justify-content:flex-start;text-align:left;padding-bottom:8px}
+ .tw.cardable tbody td:first-child::before{display:none}
+ .tw.cardable tbody td.acts{position:static;box-shadow:none;background:transparent;justify-content:flex-end;padding-top:10px;border-top:1px solid #f1f2f6;margin-top:6px;width:auto}
+ .tw.cardable tbody td.acts::before{display:none}
+ .tw.cardable tbody td:empty{display:none}
+ .tw.cardable tfoot{display:block}.tw.cardable tfoot tr{display:flex;flex-wrap:wrap;gap:6px 16px;background:#141420;color:#fff;border-radius:14px;padding:12px 14px}
+ .tw.cardable tfoot td{background:none;border:0;padding:0;color:#fff}.tw.cardable tfoot td:empty{display:none}
+}
 /* ---- components ---- */
 .grid{display:grid;gap:14px}.g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.g3{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--sh)}
@@ -153,10 +178,22 @@ function totals(){
 /* ---------- table ---------- */
 const STM={"Concluído":"g","Pago":"g","Recebido":"g","Confirmado":"g","Aprovado":"b","Pedido feito":"b","Orçado":"b","Em andamento":"y","Em negociação":"y","Pendente":"y","A orçar":"r","A contatar":"r"};
 const statusTag=s=>`<span class="tag ${STM[s]||"m"}">${esc(s||"—")}</span>`;
+function cellView(r,col,i){
+  const v=r[col.k];
+  if(col.calc) return `<td class="n b">${col.fmt?col.fmt(col.calc(r,i)):col.calc(r,i)}</td>`;
+  if(col.t==="money") return `<td class="n">${brl(v)}</td>`;
+  if(col.t==="num") return `<td class="n">${v??""}</td>`;
+  if(col.t==="check") return `<td>${v?'<span class="tag g">sim</span>':'<span class="pill">—</span>'}</td>`;
+  if(col.t==="status") return `<td>${statusTag(v)}</td>`;
+  if(col.t==="date") return `<td class="n">${dfmt(v)}</td>`;
+  if(col.t==="ref"){const rv=resolve(v,CALC);return `<td class="n">${col.money?brl(rv):rv}${typeof v==="string"&&v[0]==="@"?' <span class="pill">auto</span>':""}</td>`}
+  return v===""||v==null?`<td></td>`:`<td class="${col.b?"b":""}">${esc(v)}</td>`;
+}
 function cell(r,col,i,key){
   const v=r[col.k]; const ed=editing===key;
+  if(!ed) return cellView(r,col,i).replace("<td",`<td data-label="${esc(col.l)}"`);
   if(col.calc) return `<td class="n b">${col.fmt?col.fmt(col.calc(r,i)):col.calc(r,i)}</td>`;
-  if(!ed){
+  if(false){
     if(col.t==="money") return `<td class="n">${brl(v)}</td>`;
     if(col.t==="num") return `<td class="n">${v??""}</td>`;
     if(col.t==="check") return `<td>${v?'<span class="tag g">sim</span>':'<span class="pill">—</span>'}</td>`;
@@ -173,14 +210,67 @@ function cell(r,col,i,key){
   if(col.t==="long") return `<td><textarea ${a}>${esc(v)}</textarea></td>`;
   return `<td><input ${a} value="${esc(v)}"></td>`;
 }
+const TBL={};
+const ICON_E='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+const ICON_D='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
+const srcArr=k=>k==="cronograma"?S.cronograma.blocos:S[k];
 function table(key,rows,cols,opts={}){
-  const ed=editing===key;
-  const head=cols.map(c=>`<th class="${c.t==="money"||c.t==="num"||c.calc?"n":""}">${c.l}</th>`).join("")+(ed?"<th></th>":"");
-  const body=rows.map((r,i)=>`<tr>${cols.map(c=>cell(r,c,i,key)).join("")}${ed?`<td><button class="del" data-del="${i}" title="remover">×</button></td>`:""}</tr>`).join("");
+  const ed=editing===key; TBL[key]={cols};
+  const arr=srcArr(key)||[];
+  const sidx=(r,i)=>{if(key==="cronograma")return i;const j=arr.indexOf(r);return j<0?i:j};
+  const head=cols.map(c=>`<th class="${c.t==="money"||c.t==="num"||c.calc?"n":""}">${c.l}</th>`).join("")+(ed?"<th></th>":(canWrite?'<th class="acts"></th>':""));
+  const body=rows.map((r,i)=>`<tr>${cols.map(c=>cell(r,c,i,key)).join("")}${ed?`<td><button class="del" data-del="${i}" title="remover">×</button></td>`:(canWrite?`<td class="acts"><button class="ib" data-redit="${key}" data-ri="${sidx(r,i)}" title="Editar" aria-label="Editar">${ICON_E}</button><button class="ib d" data-rdel="${key}" data-ri="${sidx(r,i)}" title="Excluir" aria-label="Excluir">${ICON_D}</button></td>`:"")}</tr>`).join("");
   let foot="";
-  if(opts.foot){foot=`<tfoot><tr>${cols.map((c,j)=>{const f=opts.foot[c.k];return `<td class="${f!=null?"n":""}">${j===0?"TOTAL":""}${f!=null?f:""}</td>`}).join("")}${ed?"<td></td>":""}</tr></tfoot>`}
-  const tools=`<div class="btns mb">${ed?`<button class="btn p" data-save="${key}">Salvar</button><button class="btn s" data-cancel>Cancelar</button>${opts.add!==false?`<button class="btn" data-add="${key}">+ Linha</button>`:""}`:`<button class="btn" data-edit="${key}" ${canWrite?"":"disabled"}>✏️ Editar</button>`}</div>`;
-  return `${tools}<div class="tw" data-tbl="${key}"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody>${foot}</table></div>`;
+  if(opts.foot){foot=`<tfoot><tr>${cols.map((c,j)=>{const f=opts.foot[c.k];return `<td class="${f!=null?"n":""}">${j===0?"TOTAL":(f!=null?`<span class="muted small" style="color:inherit;opacity:.7">${esc(c.l)}: </span>`:"")}${f!=null?f:""}</td>`}).join("")}${ed?"<td></td>":(canWrite?"<td></td>":"")}</tr></tfoot>`}
+  const tools=`<div class="btns mb">${ed?`<button class="btn p" data-save="${key}">Salvar</button><button class="btn s" data-cancel>Cancelar</button>${opts.add!==false?`<button class="btn" data-add="${key}">+ Linha</button>`:""}`:`${opts.add!==false?`<button class="btn p" data-radd="${key}" ${canWrite?"":"disabled"}>+ Novo item</button>`:""}<button class="btn s" data-edit="${key}" ${canWrite?"":"disabled"} title="Editar várias linhas de uma vez">Editar em lote</button>`}</div>`;
+  return `${tools}<div class="tw ${ed?"":"cardable"}" data-tbl="${key}"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody>${foot}</table></div>`;
+}
+function fieldHTML(col,v){
+  const k=col.k, a=`data-rf="${k}"`;
+  if(col.t==="check") return `<label class="f chk"><input type="checkbox" ${a} ${v?"checked":""}> ${esc(col.l)}</label>`;
+  let inp;
+  if(col.t==="status"||col.t==="sel") inp=`<select ${a}>${col.opts.map(o=>`<option ${o===v?"selected":""}>${esc(o)}</option>`).join("")}</select>`;
+  else if(col.t==="money"||col.t==="num") inp=`<input ${a} inputmode="decimal" class="n" value="${esc(v??"")}">`;
+  else if(col.t==="ref") inp=`<input ${a} inputmode="decimal" class="n" value="${esc(v??"")}">`;
+  else if(col.t==="date") inp=`<input type="date" ${a} value="${esc(v??"")}">`;
+  else if(col.t==="long") inp=`<textarea ${a} rows="3">${esc(v??"")}</textarea>`;
+  else inp=`<input ${a} value="${esc(v??"")}">`;
+  const hint=col.t==="ref"&&typeof v==="string"&&v[0]==="@"?' <span class="hint">(automático — digite um número para fixar)</span>':"";
+  return `<label class="f ${col.t==="long"||col.b?"full":""}">${esc(col.l)}${hint}${inp}</label>`;
+}
+function openRowForm(key,idx){
+  const cols=(TBL[key]||{}).cols||[]; const arr=srcArr(key); const isNew=idx==null;
+  const base=isNew?(()=>{const b={};Object.keys(arr[0]||{}).forEach(x=>b[x]=typeof arr[0][x]==="boolean"?false:(typeof arr[0][x]==="number"?0:""));if(key==="checklist"){b.status="Pendente";b.prazo=S.premissas.data;if(S._fchk)b.fase=S._fchk}if(key==="presenca"&&S._fpos)b.posto=S._fpos;cols.forEach(c=>{if((c.t==="status"||c.t==="sel")&&!b[c.k])b[c.k]=c.opts[0]});return b})():arr[idx];
+  const fields=cols.filter(c=>!c.calc).map(c=>fieldHTML(c,base[c.k])).join("");
+  const title=isNew?"Novo item":`Editar: ${esc(String(base[(cols.find(c=>c.b)||cols[0])?.k]??"").slice(0,60)||"item")}`;
+  openModal(`<h2 style="margin:0 0 14px;font-size:18px">${title}</h2><div class="fgrid">${fields}</div><div class="btns mt" style="justify-content:space-between"><div class="btns"><button class="btn p" id="rfsave">Salvar</button><button class="btn s" id="rfx">Cancelar</button></div>${isNew?"":`<button class="btn" id="rfdel" style="color:var(--red)">Excluir</button>`}</div>`);
+  $("#rfx").onclick=closeModal;
+  if(!isNew) $("#rfdel").onclick=()=>confirmDel(key,idx);
+  $("#rfsave").onclick=async()=>{
+    const row=isNew?{...base}:arr[idx];
+    document.querySelectorAll("[data-rf]").forEach(el=>{const k=el.dataset.rf;const c=cols.find(x=>x.k===k);
+      if(el.type==="checkbox")row[k]=el.checked;
+      else if(c&&(c.t==="money"||c.t==="num"||c.t==="ref")){const v=el.value.trim();row[k]=v[0]==="@"?v:(v===""?"":num(v))}
+      else row[k]=el.value.trim();});
+    if(isNew)arr.push(row);
+    closeModal(); render();
+    await persist(key, `${isNew?"item incluído":"item editado"}: ${String(row[(cols.find(c=>c.b)||cols[0])?.k]??"").slice(0,80)}`);
+  };
+  setTimeout(()=>{const f=document.querySelector("#modalbox [data-rf]");if(f&&isNew)f.focus()},60);
+}
+function confirmDel(key,idx){
+  const cols=(TBL[key]||{}).cols||[]; const arr=srcArr(key); const r=arr[idx]; if(!r)return;
+  const nome=String(r[(cols.find(c=>c.b)||cols[0])?.k]??"este item").slice(0,80);
+  openModal(`<h2 style="font-size:18px;margin:0 0 8px">Excluir “${esc(nome)}”?</h2><p class="muted" style="margin:0">O item sai do painel para todos. Fica registrado no Histórico.</p><div class="btns mt"><button class="btn p" id="dc">Excluir</button><button class="btn s" id="dx">Cancelar</button></div>`);
+  $("#dx").onclick=closeModal;
+  $("#dc").onclick=async()=>{arr.splice(idx,1);closeModal();render();await persist(key,`item excluído: ${nome}`)};
+}
+async function persist(key,msg){
+  const d=TABLE_DOC[key]; if(!sb){toast("Sem conexão com o banco — alteração só nesta tela");return}
+  await askName();
+  try{const data=d==="cronograma"?S.cronograma:{rows:S[d]};const r=await sb.from("conv_plan").upsert({key:d,data,updated_by:ME,updated_at:new Date().toISOString()});if(r.error)throw r.error;await logit(d,msg);toast("Salvo ✓")}
+  catch(err){console.error(err);toast("Não foi possível salvar: "+(err.message||err))}
+  render();
 }
 const phead=(t,p,btns="")=>`<div class="phead"><div><h2>${t}</h2><p>${p}</p></div><div class="btns">${btns}</div></div>`;
 const kpi=(l,v,s="",cls="",ico="")=>`<div class="card kpi ${cls}">${ico?`<div class="ico">${ico}</div>`:""}<div class="l">${l}</div><div class="v">${v}</div>${s?`<div class="s">${s}</div>`:""}</div>`;
@@ -392,7 +482,10 @@ function readInputs(key){
 }
 document.addEventListener("click",async e=>{
   if(e.target.id==="modal"){closeModal();return}
-  const t=e.target.closest("[data-addlink],[data-chgname],[data-tab],[data-sheet],[data-edit],[data-cancel],[data-save],[data-add],[data-del],[data-pos],[data-docedit],[data-docdel]");if(!t)return;
+  const t=e.target.closest("[data-redit],[data-rdel],[data-radd],[data-addlink],[data-chgname],[data-tab],[data-sheet],[data-edit],[data-cancel],[data-save],[data-add],[data-del],[data-pos],[data-docedit],[data-docdel]");if(!t)return;
+  if(t.dataset.redit){openRowForm(t.dataset.redit,+t.dataset.ri);return}
+  if(t.dataset.rdel){confirmDel(t.dataset.rdel,+t.dataset.ri);return}
+  if(t.dataset.radd){openRowForm(t.dataset.radd,null);return}
   if(t.dataset.addlink!==undefined){addLink();return}
   if(t.dataset.chgname!==undefined){e.preventDefault();ME="";try{localStorage.removeItem("conv_nome")}catch(_){}await askName();return}
   if(t.dataset.sheet!==undefined){$("#sheet").classList.toggle("on");return}
